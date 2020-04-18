@@ -16,9 +16,7 @@ import (
 
 var (
 	device = flag.String("device", "default", "implementation of ble")
-	name   = flag.String("name", "Gopher", "name of remote peripheral")
 	addr   = flag.String("addr", "", "address of remote peripheral (MAC on Linux, UUID on OS X)")
-	sub    = flag.Duration("sub", 0, "subscribe to notification and indication for a specified period")
 	sd     = flag.Duration("sd", 5*time.Second, "scanning duration, 0 for indefinitely")
 )
 
@@ -33,7 +31,7 @@ func main() {
 
 	// Default to search device with name of Gopher (or specified by user).
 	filter := func(a ble.Advertisement) bool {
-		return strings.ToUpper(a.LocalName()) == strings.ToUpper(*name)
+		return strings.ToUpper(a.LocalName()) == strings.ToUpper("default")
 	}
 
 	// If addr is specified, search for addr instead.
@@ -54,6 +52,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("can't connect : %s", err)
 	}
+	fmt.Println(cln)
 
 	// Make sure we had the chance to print out the message.
 	done := make(chan struct{})
@@ -67,13 +66,14 @@ func main() {
 	}()
 
 	fmt.Printf("Discovering profile...\n")
-	p, err := cln.DiscoverProfile(true)
+	_, err = cln.DiscoverProfile(true)
 	if err != nil {
 		log.Fatalf("can't discover profile: %s", err)
 	}
 
 	// Start the exploration.
-	explore(cln, p)
+	//explore(cln, p)
+	
 
 	// Disconnect the connection. (On OS X, this might take a while.)
 	fmt.Printf("Disconnecting [ %s ]... (this might take up to few seconds on OS X)\n", cln.Address())
@@ -107,46 +107,6 @@ func explore(cln ble.Client, p *ble.Profile) error {
 				fmt.Printf("        Value         %x | %q\n", b, b)
 			}
 
-			if *sub != 0 {
-				// Don't bother to subscribe the Service Changed characteristics.
-				if c.UUID.Equal(ble.ServiceChangedUUID) {
-					continue
-				}
-
-				// Don't touch the Apple-specific Service/Characteristic.
-				// Service: D0611E78BBB44591A5F8487910AE4366
-				// Characteristic: 8667556C9A374C9184ED54EE27D90049, Property: 0x18 (WN),
-				//   Descriptor: 2902, Client Characteristic Configuration
-				//   Value         0000 | "\x00\x00"
-				if c.UUID.Equal(ble.MustParse("8667556C9A374C9184ED54EE27D90049")) {
-					continue
-				}
-
-				if (c.Property & ble.CharNotify) != 0 {
-					fmt.Printf("\n-- Subscribe to notification for %s --\n", *sub)
-					h := func(req []byte) { fmt.Printf("Notified: %q [ % X ]\n", string(req), req) }
-					if err := cln.Subscribe(c, false, h); err != nil {
-						log.Fatalf("subscribe failed: %s", err)
-					}
-					time.Sleep(*sub)
-					if err := cln.Unsubscribe(c, false); err != nil {
-						log.Fatalf("unsubscribe failed: %s", err)
-					}
-					fmt.Printf("-- Unsubscribe to notification --\n")
-				}
-				if (c.Property & ble.CharIndicate) != 0 {
-					fmt.Printf("\n-- Subscribe to indication of %s --\n", *sub)
-					h := func(req []byte) { fmt.Printf("Indicated: %q [ % X ]\n", string(req), req) }
-					if err := cln.Subscribe(c, true, h); err != nil {
-						log.Fatalf("subscribe failed: %s", err)
-					}
-					time.Sleep(*sub)
-					if err := cln.Unsubscribe(c, true); err != nil {
-						log.Fatalf("unsubscribe failed: %s", err)
-					}
-					fmt.Printf("-- Unsubscribe to indication --\n")
-				}
-			}
 		}
 		fmt.Printf("\n")
 	}
