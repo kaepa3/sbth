@@ -11,7 +11,7 @@ import (
 	"github.com/currantlabs/ble/examples/lib/dev"
 )
 
-func Scan(addr string, ct context.Context) {
+func Scan(addr string, ctx context.Context) {
 
 	d, err := dev.NewDevice("default")
 	if err != nil {
@@ -28,9 +28,18 @@ func Scan(addr string, ct context.Context) {
 		return flg
 	}
 
+	ctx2, cancel := context.WithCancel(ctx)
+	go func() {
+		select {
+		case <-ctx.Done():
+			cancel()
+		case <-ctx2.Done():
+		}
+	}()
+
 	// Scan for specified durantion, or until interrupted by user.
-	ctx := ble.WithSigHandler(ct)
-	cln, err := ble.Connect(ctx, filter)
+	ctxBle := ble.WithSigHandler(ctx2, cancel)
+	cln, err := ble.Connect(ctxBle, filter)
 	if err != nil {
 		log.Fatalf("can't connect : %s", err)
 	}
