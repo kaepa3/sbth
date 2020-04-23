@@ -1,30 +1,39 @@
-package main 
+package main
 
 import (
 	"fmt"
 	"log"
 	"strings"
-"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/currantlabs/ble"
 	"github.com/currantlabs/ble/examples/lib/dev"
 )
-func main (){
-	addr:="DB:FA:C9:3C:48:A2"
-	ctx ,cancel:= context.WithCancel(context.Background())
-	Scan(addr, ctx)
+
+func main() {
+	addr := "DB:FA:C9:3C:48:A2"
+	ctx, _ := context.WithCancel(context.Background())
+	ch := Scan(addr, ctx)
 	done := make(chan struct{})
-	go func (){ 
-fmt.Println("stop")
-		time.Sleep(5 * time.Second)
-		cancel()
-		close(done)
+	go func() {
+		for {
+			select {
+			case p := <-ch:
+				fmt.Println("rcv")
+				fmt.Println(p)
+				ctx.Done()
+				close(done)
+				break
+			case <-ctx.Done():
+				close(done)
+				break
+			}
+		}
 	}()
 	<-done
 }
-func Scan(addr string, ctx context.Context) {
+func Scan(addr string, ctx context.Context) <-chan ble.Advertisement {
 
 	d, err := dev.NewDevice("default")
 	if err != nil {
@@ -34,54 +43,22 @@ func Scan(addr string, ctx context.Context) {
 
 	// If addr is specified, search for addr instead.
 	filter := func(a ble.Advertisement) bool {
-		flg := strings.ToUpper(a.Address().String()) == strings.ToUpper(addr)
-		if flg {
-			fmt.Println(a.ServiceData())
-		}
-		return flg
+		return strings.ToUpper(a.Address().String()) == strings.ToUpper(addr)
 	}
-
-	ctx2, cancel := context.WithCancel(ctx)
-	go func() {
-		select {
-		case <-ctx.Done():
-			cancel()
-		case <-ctx2.Done():
-		}
-	}()
 
 	// Scan for specified durantion, or until interrupted by user.
-	ctxBle := ble.WithSigHandler(ctx2, cancel)
-	cln, err := ble.Connect(ctxBle, filter)
-	if err != nil {
-		log.Fatalf("can't connect : %s", err)
-	}
-
-	// Make sure we had the chance to print out the message.
-	done := make(chan struct{})
-
-	// Normally, the connection is disconnected by us after our exploration.
-	// However, it can be asynchronously disconnected by the remote peripheral.
-	// So we wait(detect) the disconnection in the go routine.
+	ch := make(chan ble.Advertisement)
 	go func() {
-fmt.Println("start")
-		<-cln.Disconnected()
-fmt.Println("end")
-		fmt.Printf("[ %s ] is disconnected \n", cln.Address())
-		close(done)
+		fn := func(a ble.Advertisement) {
+			ch <- a
+		}
+		err = ble.Scan(ctx ,false, fn, filter)
+		if err != nil {
+			if err != context.Canceled {
+				log.Fatalf("can't connect : %s", err)
+			}
+		}
 	}()
+	return ch
 
-	fmt.Printf("Discovering profile...\n")
-	_, err = cln.DiscoverProfile(true)
-	if err != nil {
-		log.Fatalf("can't discover profile: %s", err)
-	}
-
-	// Start the exploration.
-
-	// Disconnect the connection. (On OS X, this might take a while.)
-	fmt.Printf("Disconnecting [ %s ]... (this might take up to few seconds on OS X)\n", cln.Address())
-	cln.CancelConnection()
-
-	<-done
 }
