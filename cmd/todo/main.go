@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"fmt"
+
+	"github/kaepa3/sbth/sbth"
 )
 
 func main() {
 	addr := "DB:FA:C9:3C:48:A2"
 	ctx, _ := context.WithCancel(context.Background())
-	ch := Scan(addr, ctx)
+	ch := sbth.Scan(addr, ctx)
 	done := make(chan struct{})
 	go func() {
 		for {
