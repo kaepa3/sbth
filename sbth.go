@@ -1,16 +1,29 @@
-package sbth
+package main 
 
 import (
 	"fmt"
 	"log"
 	"strings"
+"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/currantlabs/ble"
 	"github.com/currantlabs/ble/examples/lib/dev"
 )
-
+func main (){
+	addr:="DB:FA:C9:3C:48:A2"
+	ctx ,cancel:= context.WithCancel(context.Background())
+	Scan(addr, ctx)
+	done := make(chan struct{})
+	go func (){ 
+fmt.Println("stop")
+		time.Sleep(5 * time.Second)
+		cancel()
+		close(done)
+	}()
+	<-done
+}
 func Scan(addr string, ctx context.Context) {
 
 	d, err := dev.NewDevice("default")
@@ -51,7 +64,9 @@ func Scan(addr string, ctx context.Context) {
 	// However, it can be asynchronously disconnected by the remote peripheral.
 	// So we wait(detect) the disconnection in the go routine.
 	go func() {
+fmt.Println("start")
 		<-cln.Disconnected()
+fmt.Println("end")
 		fmt.Printf("[ %s ] is disconnected \n", cln.Address())
 		close(done)
 	}()
