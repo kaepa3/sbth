@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github/kaepa3/sbth/sbth"
+	"github.com/kaepa3/sbth"
 )
 
 func main() {
