@@ -10,7 +10,7 @@ import (
 	"github.com/currantlabs/ble/examples/lib/dev"
 )
 
-func Scan(addr string, ctx context.Context) <-chan ble.Advertisement {
+func Scan(addr string, ctx context.Context) <-chan ThermohygroPacket {
 
 	d, err := dev.NewDevice("default")
 	if err != nil {
@@ -24,10 +24,15 @@ func Scan(addr string, ctx context.Context) <-chan ble.Advertisement {
 	}
 
 	// Scan for specified durantion, or until interrupted by user.
-	ch := make(chan ble.Advertisement)
+	ch := make(chan ThermohygroPacket)
 	go func() {
 		fn := func(a ble.Advertisement) {
-			ch <- a
+			b := a.ServiceData()
+			if 1 == len(b) {
+				pack := ThermohygroPacket{[]byte(b[0].UUID), b[0].Data}
+				ch <- pack
+			}
+
 		}
 		err = ble.Scan(ctx, false, fn, filter)
 		if err != nil {
@@ -37,5 +42,11 @@ func Scan(addr string, ctx context.Context) <-chan ble.Advertisement {
 		}
 	}()
 	return ch
+}
 
+type ThermohygroData []byte
+
+type ThermohygroPacket struct {
+	Uuid   []byte
+	Packet ThermohygroData
 }
