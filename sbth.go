@@ -50,3 +50,11 @@ type ThermohygroPacket struct {
 	Uuid   []byte
 	Packet ThermohygroData
 }
+
+const (
+	BatteryMask byte = 0x7f
+)
+
+func (p *ThermohygroPacket) GetBattery() int {
+	return int(p.Packet[2] & BatteryMask)
+}
