@@ -17,6 +17,7 @@ require (
 	github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/raff/goble v0.0.0-20200327175727-d63360dcfd80 // indirect
+	github.com/stretchr/testify v1.5.1
 	github.com/urfave/cli v1.22.4 // indirect
 	golang.org/x/net v0.0.0-20200421231249-e086a090c8fd
 	golang.org/x/tools v0.0.0-20200426102838-f3a5411a4c3b // indirect
