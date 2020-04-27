@@ -3,6 +3,8 @@ package sbth
 import (
 	"log"
 	"strings"
+"fmt"
+"strconv"
 
 	"golang.org/x/net/context"
 
@@ -53,8 +55,26 @@ type ThermohygroPacket struct {
 
 const (
 	BatteryMask byte = 0x7f
+	HumidityMask byte = 0x7f
+	T1Mask byte = 0x7f
+	T2Mask byte = 0x0f
+
 )
 
 func (p *ThermohygroPacket) GetBattery() int {
 	return int(p.Packet[2] & BatteryMask)
+}
+
+func (p *ThermohygroPacket) GetHumidity() int {
+	return int(p.Packet[5] & HumidityMask)
+}
+func (p *ThermohygroPacket) GetTemperature() float64 {
+	t1 := int(p.Packet[4] & T1Mask)
+	t2 := int(p.Packet[3] & T2Mask)
+	numStr := fmt.Sprintf("%d.%d", t1,t2)
+	f, err := strconv.ParseFloat(numStr, 64)
+	if err != nil {
+		return 0 
+	}
+	return f
 }
