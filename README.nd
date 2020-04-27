@@ -1,4 +1,5 @@
 # SBTH
+
 Bluetoothで以下のデバイスにBLEで接続、情報取得について行う際に使用する。
 https://www.switchbot.jp/meter
 
